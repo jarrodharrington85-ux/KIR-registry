@@ -1163,7 +1163,13 @@
 
     // Normalize owner types — PDF line wrapping can insert spaces (e.g. "ki_ company" → "ki_company")
     owners.forEach(o => {
-      if (o.type) o.type = o.type.replace(/\s+/g, '').toLowerCase();
+      if (o.type) {
+        const before = o.type;
+        o.type = o.type.replace(/[\s\u00A0\u200B]+/g, '').toLowerCase();
+        if (before !== o.type) {
+          log.info(`Owner type normalized: "${before}" → "${o.type}" (charCodes: ${Array.from(before).map(c => c.charCodeAt(0)).join(',')})`);
+        }
+      }
     });
 
     // Group by type
