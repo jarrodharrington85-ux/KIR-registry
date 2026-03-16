@@ -510,7 +510,8 @@
     }
 
     // Wait for Vue to re-render conditional fields after country change
-    await sleep(1500);
+    // Poll until the island/state field becomes a <select> (for Kiribati)
+    await waitForSelect('principalplaceofbusinesscorpaddressstate', null, 5000);
 
     // Now set the remaining address fields
     // Island/State may be a <select> after country change (e.g. Kiribati)
@@ -877,7 +878,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(1500);
+    await waitForSelect('corpofficercorpaddressstate', row, 5000);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -945,7 +946,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(1500);
+    await waitForSelect('corpofficercorpaddressstate', row, 5000);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -997,7 +998,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', bo.country, lbl('country'));
-    await sleep(1500);
+    await waitForSelect('corpofficercorpaddressstate', row, 5000);
 
     setRowField(row, 'corpofficercorpaddressstreet1', bo.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
@@ -1276,6 +1277,29 @@
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Poll until a field becomes a <select>, or timeout.
+   * Used after setting country — Vue re-renders the island/state field 
+   * from <input> to <select> but this takes variable time on slow connections.
+   * @param {string} fieldName - field ID prefix
+   * @param {Element} [container] - optional container to search within
+   * @param {number} [timeout=5000] - max wait in ms
+   * @param {number} [interval=200] - poll interval in ms
+   * @returns {Promise<Element|null>} the select element, or null if timeout
+   */
+  async function waitForSelect(fieldName, container, timeout = 5000, interval = 200) {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      const el = fieldSetter.find(fieldName, container);
+      if (el && el.tagName === 'SELECT' && el.options.length > 1) {
+        return el;
+      }
+      await sleep(interval);
+    }
+    // Return whatever we have even if not a select
+    return fieldSetter.find(fieldName, container);
   }
 
   async function run() {
