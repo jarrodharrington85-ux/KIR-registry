@@ -1132,14 +1132,13 @@
     pdfJunkPatterns.forEach(p => { json = json.replace(p, ''); });
 
     // 2. Fix newlines injected by PDF text wrapping inside JSON strings.
-    //    JSON strings cannot contain literal newlines. Replace any newline
-    //    that appears between a non-structural character and a non-structural
-    //    character with a space (i.e. within a string value).
-    //    Strategy: remove all newlines then re-parse. Since the JSON is
-    //    minified (single line), any newline is an artifact.
-    json = json.replace(/\r?\n/g, ' ');
+    //    JSON strings cannot contain literal newlines. Since the JSON is
+    //    minified (single line), any newline or control character is a PDF artifact
+    //    or a prompt() paste artifact. Strip them all.
+    //    Replace all control chars (0x00-0x1F except nothing) with space.
+    json = json.replace(/[\x00-\x1F\x7F]/g, ' ');
 
-    // 3. Collapse multiple spaces (from stripped junk + newlines)
+    // 3. Collapse multiple spaces (from stripped junk + control chars)
     json = json.replace(/\s{2,}/g, ' ');
 
     json = json.trim();
