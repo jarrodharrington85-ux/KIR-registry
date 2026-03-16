@@ -632,30 +632,27 @@
     }
 
     // Tab 4: Addresses
+    // Wait extra time for business name debounce to settle before navigating away
+    await sleep(1500);
     navigateToTab('addresses');
 
     const addr = data.businessAddress || {};
 
-    // Set country FIRST — this triggers Vue to show/hide conditional fields
-    // (e.g. Kiribati shows "Island" instead of "City/Town")
-    // Always set explicitly even if not in JSON — default to Kiribati for BN
+    // Set country — use forceCountryChange to trigger full VFG schema re-evaluation
+    // This toggles the country model, which switches the layout (e.g. State→Island, removes City for Kiribati)
     const addrCountry = addr.country || 'Kiribati';
     const countryVal = resolveCountry(addrCountry);
     if (countryVal) {
       const result = fieldSetter.setSelect('principalplaceofbusinesscorpaddresscountryid', countryVal);
       log.field('Country', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? addrCountry : result);
+      // Force the VFG schema to re-evaluate by toggling the model
+      await forceCountryChange('principalplaceofbusinesscorpaddresscountryid', countryVal, addrCountry.toUpperCase());
     }
 
-    // Wait for Vue to re-render conditional fields after country change
-    // Poll until the island/state field becomes a <select> (for Kiribati)
-    await sleep(500); // Wait for country change to settle
-
     // Now set the remaining address fields
-    // Island/State may be a <select> after country change (e.g. Kiribati)
     const addrFields = [
       ['principalplaceofbusinesscorpaddressstreet1', addr.addr1, 'Address line 1'],
       ['principalplaceofbusinesscorpaddressstreet2', addr.addr2, 'Address line 2'],
-      ['principalplaceofbusinesscorpaddresscity',    addr.city, 'City/Town'],
       ['principalplaceofbusinesscorpaddresszip',     addr.postcode, 'Postal code'],
     ];
 
@@ -1007,19 +1004,22 @@
     }
 
     // Address — set country FIRST, wait for Vue conditional re-render
+    // Address — force country change to trigger VFG schema re-evaluation
+    const ownerCountryVal = resolveCountry(owner.country || 'Kiribati');
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(500); // Wait for country change to settle
+    if (ownerCountryVal) {
+      await forceCountryChange('corpofficercorpaddresscountryid', ownerCountryVal, (owner.country || 'Kiribati').toUpperCase(), row);
+    }
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
 
-    // Island/State — custom Vue dropdown component
+    // Island — use Vue dropdown itemPicked
     if (owner.island) {
       const result = fieldSetter.setVueDropdown('corpofficercorpaddressstate', owner.island, row);
       log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${owner.island}"` : result);
     }
 
-    setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', owner.postcode, lbl('postal code'));
   }
 
@@ -1068,9 +1068,12 @@
       setCountryOrNationality(row, 'corpofficerjurisdictionofincorporationid', owner.oeJurisdiction, lbl('jurisdiction'));
     }
 
-    // Address — set country FIRST, wait for Vue conditional re-render
+    // Address — force country change to trigger VFG schema re-evaluation
+    const oeCountryVal = resolveCountry(owner.country || 'Kiribati');
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(500); // Wait for country change to settle
+    if (oeCountryVal) {
+      await forceCountryChange('corpofficercorpaddresscountryid', oeCountryVal, (owner.country || 'Kiribati').toUpperCase(), row);
+    }
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -1080,7 +1083,6 @@
       log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${owner.island}"` : result);
     }
 
-    setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', owner.postcode, lbl('postal code'));
   }
 
@@ -1114,9 +1116,12 @@
       setCountryOrNationality(row, 'corpofficerothernationalityid', bo.nationality2, lbl('other nationality'));
     }
 
-    // Address — set country FIRST, wait for Vue conditional re-render
+    // Address — force country change to trigger VFG schema re-evaluation
+    const boCountryVal = resolveCountry(bo.country || 'Kiribati');
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', bo.country, lbl('country'));
-    await sleep(500); // Wait for country change to settle
+    if (boCountryVal) {
+      await forceCountryChange('corpofficercorpaddresscountryid', boCountryVal, (bo.country || 'Kiribati').toUpperCase(), row);
+    }
 
     setRowField(row, 'corpofficercorpaddressstreet1', bo.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
@@ -1126,7 +1131,6 @@
       log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${bo.island}"` : result);
     }
 
-    setRowField(row, 'corpofficercorpaddresscity', bo.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', bo.postcode, lbl('postal code'));
 
     // Relationship textarea — UNIQUE: no UUID suffix, direct ID
@@ -1392,51 +1396,61 @@
   }
 
   /**
-   * Wait for a field's options to change after a country selection.
-   * The field may ALREADY be a <select> with old options — we need to wait
-   * for Vue to swap in the new option list (e.g. generic states → Kiribati islands).
-   * 
-   * Strategy: snapshot the current first-option text, then poll until either:
-   *   (a) the first option text changes, or
-   *   (b) the element type changes (input→select or vice versa), or
-   *   (c) timeout
-   * 
-   * @param {string} fieldName - field ID prefix
+   * Force a country change on a VFG address block by toggling the model.
+   * The Paradigm Apps registry uses Vue FormGenerator with schema rules that
+   * control which address fields appear based on CountryId. Simply setting
+   * the <select> value doesn't trigger re-evaluation. We must:
+   *   1. Find the grandparent Vue component that holds the model (CountryId, State, etc.)
+   *   2. Toggle CountryId to a different value, call evaluateRules()
+   *   3. Toggle back to the target country, call evaluateRules() again
+   * This forces the full layout switch (e.g. State→Island, City removed for Kiribati).
+   *
+   * @param {string} countryFieldName - ID prefix for the country select (e.g. 'corpofficercorpaddresscountryid')
+   * @param {string} countryId - target country ID (e.g. '120' for Kiribati)
+   * @param {string} countryName - target country name (e.g. 'KIRIBATI')
    * @param {Element} [container] - optional container to search within
-   * @param {number} [timeout=5000] - max wait in ms
-   * @param {number} [interval=200] - poll interval in ms
-   * @returns {Promise<Element|null>} the field element after change, or null
    */
-  async function waitForSelect(fieldName, container, timeout = 5000, interval = 200) {
-    // Snapshot current state
-    const initialEl = fieldSetter.find(fieldName, container);
-    const initialTag = initialEl ? initialEl.tagName : null;
-    const initialOptionCount = (initialEl && initialEl.tagName === 'SELECT') ? initialEl.options.length : 0;
-    const initialFirstOption = (initialEl && initialEl.tagName === 'SELECT' && initialEl.options.length > 1)
-      ? initialEl.options[1].text : null; // [1] to skip the "CLICK TO SELECT" placeholder
-
-    const deadline = Date.now() + timeout;
-    while (Date.now() < deadline) {
-      await sleep(interval);
-      const el = fieldSetter.find(fieldName, container);
-      if (!el) continue;
-
-      // Check if element type changed (input→select or new element entirely)
-      if (el.tagName !== initialTag) return el;
-
-      // If it's a select, check if options changed
-      if (el.tagName === 'SELECT') {
-        const currentCount = el.options.length;
-        const currentFirst = (currentCount > 1) ? el.options[1].text : null;
-
-        // Options have changed — new country options loaded
-        if (currentCount !== initialOptionCount) return el;
-        if (currentFirst !== initialFirstOption) return el;
-      }
+  async function forceCountryChange(countryFieldName, countryId, countryName, container) {
+    const el = fieldSetter.find(countryFieldName, container);
+    if (!el) {
+      log.warn('forceCountryChange: country field not found');
+      return;
     }
 
-    log.warn(`waitForSelect timeout for ${fieldName} — proceeding with current state`);
-    return fieldSetter.find(fieldName, container);
+    // Walk up to find Vue instance, then grandparent with model
+    let node = el;
+    while (node && !node.__vue__) node = node.parentElement;
+    if (!node || !node.__vue__) {
+      log.warn('forceCountryChange: no Vue instance found');
+      return;
+    }
+
+    const gp = node.__vue__.$parent?.$parent;
+    if (!gp || !gp.model || !('CountryId' in gp.model)) {
+      log.warn('forceCountryChange: grandparent model not found');
+      return;
+    }
+
+    // Toggle to a dummy country (10 = Andorra) to force schema re-evaluation
+    const dummyId = countryId === '10' ? '20' : '10';
+    gp.model.CountryId = parseInt(dummyId);
+    gp.model.CountryName = 'TEMP';
+    if (gp.$parent && typeof gp.$parent.evaluateRules === 'function') {
+      gp.$parent.evaluateRules();
+    }
+    gp.$forceUpdate();
+    await sleep(800);
+
+    // Toggle back to target country
+    gp.model.CountryId = parseInt(countryId);
+    gp.model.CountryName = countryName;
+    if (gp.$parent && typeof gp.$parent.evaluateRules === 'function') {
+      gp.$parent.evaluateRules();
+    }
+    gp.$forceUpdate();
+    await sleep(800);
+
+    log.info(`Forced country change to ${countryName} (${countryId})`);
   }
 
   async function run() {
