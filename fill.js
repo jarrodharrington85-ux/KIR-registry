@@ -297,6 +297,80 @@
         // Vue access is best-effort; DOM events are the primary mechanism
       }
       return false;
+    },
+
+    /**
+     * Set a custom Vue dropdown component (dropdown-container with selectedItem/itemList).
+     * These are NOT native <select> elements — they're Vue components that render
+     * an <input class="no-input"> as display, with selection managed via Vue $data.
+     * 
+     * @param {string} fieldName - field ID prefix (e.g. 'corpofficercorpaddressstate')
+     * @param {string} value - text value to select (e.g. 'Tarawa')
+     * @param {Element} [container] - optional container to search within
+     * @returns {string} 'ok', 'skip', 'not_found', 'no_match', or error
+     */
+    setVueDropdown(fieldName, value, container) {
+      if (!value) return 'skip';
+      const el = this.find(fieldName, container);
+      if (!el) return 'not_found';
+
+      try {
+        // Walk up to find the Vue dropdown component (has selectedItem + itemList)
+        let node = el;
+        let vm = null;
+        for (let i = 0; i < 10; i++) {
+          if (node.__vue__ && 'selectedItem' in node.__vue__.$data) {
+            vm = node.__vue__;
+            break;
+          }
+          node = node.parentElement;
+          if (!node) break;
+        }
+
+        if (!vm) {
+          // Fallback: no Vue dropdown found, try setText
+          return this.setText(fieldName, value, container);
+        }
+
+        // Find matching item in itemList (case-insensitive, space-collapsed)
+        const normalised = value.trim().toLowerCase();
+        const collapsed = normalised.replace(/[\s\u00A0]+/g, '');
+        
+        let match = null;
+        if (vm.itemList && Array.isArray(vm.itemList)) {
+          match = vm.itemList.find(item => {
+            const itemStr = (typeof item === 'string' ? item : item.text || item.name || '').trim().toLowerCase();
+            return itemStr === normalised || itemStr.replace(/[\s\u00A0]+/g, '') === collapsed;
+          });
+        }
+
+        if (match === null || match === undefined) {
+          return `no_match: "${value}" not in itemList (${vm.itemList ? vm.itemList.length : 0} items)`;
+        }
+
+        // Set the selectedItem on the Vue component
+        vm.selectedItem = match;
+        
+        // Also set the input display value
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype, 'value'
+        )?.set;
+        if (nativeSetter) {
+          nativeSetter.call(el, typeof match === 'string' ? match : match.text || match.name || value);
+        }
+
+        // Emit events
+        if (typeof vm.$emit === 'function') {
+          vm.$emit('input', match);
+          vm.$emit('change', match);
+        }
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+
+        return 'ok';
+      } catch (e) {
+        return 'error: ' + e.message;
+      }
     }
   };
 
@@ -602,17 +676,10 @@
       }
     });
 
-    // Handle island separately — may be a select
+    // Handle island — custom Vue dropdown component (not a native <select>)
     if (addr.island) {
-      const islandEl = fieldSetter.find('principalplaceofbusinesscorpaddressstate');
-      if (islandEl && islandEl.tagName === 'SELECT') {
-        const result = fieldSetter.setSelectByText('principalplaceofbusinesscorpaddressstate', addr.island);
-        log.field('Island', result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
-          result === 'ok' ? `"${addr.island}"` : result);
-      } else {
-        const result = fieldSetter.setText('principalplaceofbusinesscorpaddressstate', addr.island);
-        log.field('Island', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${addr.island}"` : result);
-      }
+      const result = fieldSetter.setVueDropdown('principalplaceofbusinesscorpaddressstate', addr.island);
+      log.field('Island', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${addr.island}"` : result);
     } else {
       log.field('Island', 'skip', 'No value in JSON');
     }
@@ -952,16 +1019,10 @@
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
 
-    // Island/State — after country change, this may be a <select> (e.g. for Kiribati)
+    // Island/State — custom Vue dropdown component
     if (owner.island) {
-      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
-      if (islandEl && islandEl.tagName === 'SELECT') {
-        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', owner.island, row);
-        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
-          result === 'ok' ? `"${owner.island}"` : result);
-      } else {
-        setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
-      }
+      const result = fieldSetter.setVueDropdown('corpofficercorpaddressstate', owner.island, row);
+      log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${owner.island}"` : result);
     }
 
     setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
@@ -1021,14 +1082,8 @@
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
 
     if (owner.island) {
-      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
-      if (islandEl && islandEl.tagName === 'SELECT') {
-        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', owner.island, row);
-        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
-          result === 'ok' ? `"${owner.island}"` : result);
-      } else {
-        setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
-      }
+      const result = fieldSetter.setVueDropdown('corpofficercorpaddressstate', owner.island, row);
+      log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${owner.island}"` : result);
     }
 
     setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
@@ -1073,14 +1128,8 @@
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
 
     if (bo.island) {
-      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
-      if (islandEl && islandEl.tagName === 'SELECT') {
-        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', bo.island, row);
-        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
-          result === 'ok' ? `"${bo.island}"` : result);
-      } else {
-        setRowField(row, 'corpofficercorpaddressstate', bo.island, lbl('island'));
-      }
+      const result = fieldSetter.setVueDropdown('corpofficercorpaddressstate', bo.island, row);
+      log.field(lbl('island'), result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${bo.island}"` : result);
     }
 
     setRowField(row, 'corpofficercorpaddresscity', bo.city, lbl('city'));
