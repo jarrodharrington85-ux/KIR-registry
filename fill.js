@@ -348,24 +348,18 @@
           return `no_match: "${value}" not in itemList (${vm.itemList ? vm.itemList.length : 0} items)`;
         }
 
-        // Set the selectedItem on the Vue component
-        vm.selectedItem = match;
-        
-        // Also set the input display value
-        const nativeSetter = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype, 'value'
-        )?.set;
-        if (nativeSetter) {
-          nativeSetter.call(el, typeof match === 'string' ? match : match.text || match.name || value);
+        // Use itemPicked method if available — this is the proper component API
+        if (typeof vm.itemPicked === 'function') {
+          vm.itemPicked(match);
+          return 'ok';
         }
 
-        // Emit events
+        // Fallback: set selectedItem directly
+        vm.selectedItem = match;
         if (typeof vm.$emit === 'function') {
           vm.$emit('input', match);
           vm.$emit('change', match);
         }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
 
         return 'ok';
       } catch (e) {
@@ -654,7 +648,7 @@
 
     // Wait for Vue to re-render conditional fields after country change
     // Poll until the island/state field becomes a <select> (for Kiribati)
-    await waitForSelect('principalplaceofbusinesscorpaddressstate', null, 5000);
+    await sleep(500); // Wait for country change to settle
 
     // Now set the remaining address fields
     // Island/State may be a <select> after country change (e.g. Kiribati)
@@ -1014,7 +1008,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await waitForSelect('corpofficercorpaddressstate', row, 5000);
+    await sleep(500); // Wait for country change to settle
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -1076,7 +1070,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await waitForSelect('corpofficercorpaddressstate', row, 5000);
+    await sleep(500); // Wait for country change to settle
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -1122,7 +1116,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', bo.country, lbl('country'));
-    await waitForSelect('corpofficercorpaddressstate', row, 5000);
+    await sleep(500); // Wait for country change to settle
 
     setRowField(row, 'corpofficercorpaddressstreet1', bo.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
