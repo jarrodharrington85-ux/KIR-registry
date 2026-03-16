@@ -967,7 +967,7 @@
         el.focus();
         await sleep(200);
 
-        const regNo = owner.entityRegNo;
+        const regNo = (owner.entityRegNo || '').trim();
         for (let i = 0; i < regNo.length; i++) {
           el.value = regNo.substring(0, i + 1);
           el.dispatchEvent(new InputEvent('input', {
@@ -1160,6 +1160,11 @@
       log.info('No owners to fill');
       return;
     }
+
+    // Normalize owner types — PDF line wrapping can insert spaces (e.g. "ki_ company" → "ki_company")
+    owners.forEach(o => {
+      if (o.type) o.type = o.type.replace(/\s+/g, '').toLowerCase();
+    });
 
     // Group by type
     const natural = owners.filter(o => o.type === 'person');
@@ -1533,9 +1538,10 @@
 
     // Build upload requirements
     const uploads = [];
+    const normalType = (t) => (t || '').replace(/\s+/g, '').toLowerCase();
     if (data.owners) {
       data.owners.forEach(o => {
-        if (o.type === 'person') {
+        if (normalType(o.type) === 'person') {
           const name = [o.first, o.middle, o.last].filter(Boolean).join(' ');
           uploads.push(`Government-issued photo ID for <strong>${name}</strong>`);
         }
@@ -1569,7 +1575,7 @@
 
     if (data.owners && data.owners.length > 0) {
       const ownerNames = data.owners
-        .filter(o => o.type === 'person')
+        .filter(o => normalType(o.type) === 'person')
         .map(o => [o.first, o.last].filter(Boolean).join(' '));
       checks.push({
         label: 'Review the <strong>Owners</strong> tab',
