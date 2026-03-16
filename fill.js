@@ -1308,11 +1308,34 @@
 
     json = json.trim();
 
+    let data;
     try {
-      return JSON.parse(json);
+      data = JSON.parse(json);
     } catch (e) {
       throw new Error(`Invalid JSON: ${e.message}\nFirst 300 chars: ${json.substring(0, 300)}`);
     }
+
+    // 4. Normalize all string values — collapse multiple spaces and trim.
+    //    PDF line wrapping can insert spaces/breaks mid-value (e.g. "Bikenibeu Vil lage").
+    //    This pass cleans up any remaining artifacts in the parsed data.
+    function normalizeStrings(obj) {
+      if (typeof obj === 'string') {
+        return obj.replace(/[\s\u00A0\u200B]+/g, ' ').trim();
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(normalizeStrings);
+      }
+      if (obj && typeof obj === 'object') {
+        const out = {};
+        for (const key of Object.keys(obj)) {
+          out[key] = normalizeStrings(obj[key]);
+        }
+        return out;
+      }
+      return obj;
+    }
+
+    return normalizeStrings(data);
   }
 
   // ============================================================
@@ -1829,7 +1852,7 @@
           width: 0px !important;
           border-left: none !important;
           box-shadow: none !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
         #autofill-checklist.afc-collapsed .afc-header,
         #autofill-checklist.afc-collapsed .afc-body,
