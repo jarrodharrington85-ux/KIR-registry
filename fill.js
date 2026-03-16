@@ -478,11 +478,68 @@
     if (formInfo.formType === 'BN-0') {
       const nameToSet = formInfo.entityName || data.businessName;
       if (nameToSet) {
-        const result = fieldSetter.setText('corpname', nameToSet);
-        log.field('New business name', result === 'ok' ? 'ok' : 'fail',
-          result === 'ok' ? `Copied: "${nameToSet}"` : result);
-        // The entity-name-input component may need extra time
-        await sleep(300);
+        const el = fieldSetter.find('corpname');
+        if (el) {
+          // The entity-name-input is a custom Vue component that may not respond
+          // to standard value setting. Use multiple strategies:
+          
+          // 1. Focus the field first
+          el.focus();
+          await sleep(100);
+          
+          // 2. Clear existing value
+          el.value = '';
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          await sleep(100);
+          
+          // 3. Set via native setter
+          const nativeSetter = Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype, 'value'
+          )?.set;
+          if (nativeSetter) {
+            nativeSetter.call(el, nameToSet);
+          } else {
+            el.value = nameToSet;
+          }
+          
+          // 4. Fire comprehensive events
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          el.dispatchEvent(new Event('blur', { bubbles: true }));
+          el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+          
+          // 5. Walk up to find Vue instance and set directly
+          let node = el;
+          for (let i = 0; i < 10; i++) {
+            if (node.__vue__) {
+              const vm = node.__vue__;
+              // Try various property names the component might use
+              if ('localValue' in vm) vm.localValue = nameToSet;
+              if ('value' in vm.$data) vm.$data.value = nameToSet;
+              if ('inputValue' in vm) vm.inputValue = nameToSet;
+              if ('query' in vm) vm.query = nameToSet;
+              if ('searchText' in vm) vm.searchText = nameToSet;
+              if (typeof vm.$emit === 'function') {
+                vm.$emit('input', nameToSet);
+                vm.$emit('change', nameToSet);
+              }
+              // Force re-render
+              if (typeof vm.$forceUpdate === 'function') vm.$forceUpdate();
+              break;
+            }
+            node = node.parentElement;
+            if (!node) break;
+          }
+          
+          await sleep(300);
+          
+          // Check if it stuck
+          const currentVal = el.value;
+          log.field('New business name', currentVal ? 'ok' : 'fail',
+            currentVal ? `Set: "${currentVal}"` : `Value didn't persist — component may need manual entry`);
+        } else {
+          log.field('New business name', 'fail', 'Field not found');
+        }
       }
     }
 
