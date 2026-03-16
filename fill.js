@@ -474,58 +474,72 @@
     navigateToTab('business-name');
 
     // For BN-0 re-registrations, set "New business name"
-    // This is an entity-name-input search component — it may reject programmatic input.
-    // Try to set it, but report honestly if the component doesn't accept the value.
+    // This is an entity-name-input component with debounced input handlers.
+    // Standard value-setting gets overwritten by the debounce. Instead, we:
+    //  1. Find the Vue component and call its debouncedInput directly
+    //  2. Or simulate typing by setting value + dispatching input on each keystroke
     if (formInfo.formType === 'BN-0') {
       const nameToSet = formInfo.entityName || data.businessName;
       if (nameToSet) {
         const el = fieldSetter.find('corpname');
         if (el) {
-          // Focus and set value
           el.focus();
-          await sleep(100);
+          await sleep(200);
 
+          // Find the Vue component
+          let vm = null;
+          let node = el;
+          for (let i = 0; i < 15; i++) {
+            if (node.__vue__) { vm = node.__vue__; break; }
+            node = node.parentElement;
+            if (!node) break;
+          }
+
+          // Strategy: set the native value then trigger the Vue component's
+          // own input handler via a real InputEvent (not just Event('input')).
+          // InputEvent carries the 'data' property that many Vue input components check.
           const nativeSetter = Object.getOwnPropertyDescriptor(
             HTMLInputElement.prototype, 'value'
           )?.set;
+
           if (nativeSetter) {
             nativeSetter.call(el, nameToSet);
           } else {
             el.value = nameToSet;
           }
 
-          // Fire events
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          el.dispatchEvent(new Event('blur', { bubbles: true }));
-          el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+          // Dispatch InputEvent (not plain Event) — this is what real typing produces
+          el.dispatchEvent(new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            inputType: 'insertText',
+            data: nameToSet
+          }));
 
-          // Try Vue localValue
-          let node = el;
-          for (let i = 0; i < 10; i++) {
-            if (node.__vue__) {
-              const vm = node.__vue__;
-              // Log what properties exist for debugging
-              const dataKeys = vm.$data ? Object.keys(vm.$data) : [];
-              log.info(`corpname Vue $data keys: ${dataKeys.join(', ')}`);
-              
-              if ('localValue' in vm) vm.localValue = nameToSet;
-              if (vm.$data && 'value' in vm.$data) vm.$data.value = nameToSet;
-              if ('inputValue' in vm) vm.inputValue = nameToSet;
-              if ('query' in vm) vm.query = nameToSet;
-              if ('name' in vm) vm.name = nameToSet;
-              if (typeof vm.$emit === 'function') {
-                vm.$emit('input', nameToSet);
-                vm.$emit('change', nameToSet);
-              }
-              if (typeof vm.$forceUpdate === 'function') vm.$forceUpdate();
-              break;
-            }
-            node = node.parentElement;
-            if (!node) break;
+          // Also fire change and the debounced handler directly if available
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+
+          if (vm && typeof vm.debouncedInput === 'function') {
+            // Call the component's own debounced input handler
+            vm.debouncedInput(nameToSet);
+            log.info('Called vm.debouncedInput directly');
           }
 
-          await sleep(500);
+          if (vm && typeof vm.debouncedValueChange === 'function') {
+            vm.debouncedValueChange(nameToSet);
+            log.info('Called vm.debouncedValueChange directly');
+          }
+
+          // Give debounce time to settle
+          await sleep(800);
+
+          // Also try emitting through Vue
+          if (vm && typeof vm.$emit === 'function') {
+            vm.$emit('input', nameToSet);
+            vm.$emit('change', nameToSet);
+          }
+
+          await sleep(300);
 
           // Verify
           const stuck = el.value && el.value.length > 0;
@@ -533,7 +547,7 @@
             log.field('New business name', 'ok', `Set: "${el.value}"`);
           } else {
             log.field('New business name', 'fail',
-              `Search component rejected value — staff must type "${nameToSet}" manually`);
+              `Component rejected value — staff must type "${nameToSet}" manually`);
           }
         } else {
           log.field('New business name', 'fail', 'Field not found');
