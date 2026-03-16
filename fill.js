@@ -1664,135 +1664,146 @@
     panel.innerHTML = `
       <style>
         #autofill-checklist {
-          position: fixed;
-          top: 0;
-          right: 0;
-          width: 360px;
-          height: 100vh;
-          background: #fff;
-          border-left: 2px solid #d1d5db;
-          box-shadow: -4px 0 12px rgba(0,0,0,0.08);
-          z-index: 99999;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          font-size: 13px;
-          color: #1f2937;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
+          position: fixed !important;
+          top: 0 !important;
+          right: 0 !important;
+          width: 360px !important;
+          height: 100vh !important;
+          background: #fff !important;
+          border-left: 2px solid #d1d5db !important;
+          box-shadow: -4px 0 12px rgba(0,0,0,0.08) !important;
+          z-index: 99999 !important;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+          font-size: 13px !important;
+          color: #1f2937 !important;
+          display: flex !important;
+          flex-direction: column !important;
+          overflow: hidden !important;
         }
-        #autofill-checklist * { box-sizing: border-box; margin: 0; padding: 0; }
-        .afc-header {
-          padding: 16px 20px;
-          background: #f8fafc;
-          border-bottom: 1px solid #e5e7eb;
-          flex-shrink: 0;
+        #autofill-checklist * { box-sizing: border-box !important; }
+        #autofill-checklist .afc-header {
+          padding: 16px 20px !important;
+          background: #f8fafc !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          flex-shrink: 0 !important;
+          margin: 0 !important;
         }
-        .afc-header h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-        .afc-header p { font-size: 12px; color: #6b7280; }
-        .afc-body {
-          flex: 1;
-          overflow-y: auto;
-          padding: 20px;
+        #autofill-checklist .afc-header h2 { font-size: 16px !important; font-weight: 700 !important; margin: 0 0 4px 0 !important; padding: 0 !important; color: #1f2937 !important; }
+        #autofill-checklist .afc-header p { font-size: 12px !important; color: #6b7280 !important; margin: 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-body {
+          flex: 1 !important;
+          overflow-y: auto !important;
+          padding: 20px !important;
+          margin: 0 !important;
         }
-        .afc-summary {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 14px;
-          background: ${counts.fail > 0 ? '#fef2f2' : '#f0fdf4'};
-          border-radius: 6px;
-          margin-bottom: 20px;
-          border: 1px solid ${counts.fail > 0 ? '#fecaca' : '#bbf7d0'};
+        #autofill-checklist .afc-summary {
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          padding: 12px 14px !important;
+          background: ${counts.fail > 0 ? '#fef2f2' : '#f0fdf4'} !important;
+          border-radius: 6px !important;
+          margin: 0 0 20px 0 !important;
+          border: 1px solid ${counts.fail > 0 ? '#fecaca' : '#bbf7d0'} !important;
         }
-        .afc-summary-icon { font-size: 18px; flex-shrink: 0; }
-        .afc-summary-text { font-size: 14px; }
-        .afc-summary-text strong { font-weight: 600; }
-        .afc-section-label {
-          font-size: 11px;
-          font-weight: 700;
-          color: #6b7280;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin: 0 0 10px;
+        #autofill-checklist .afc-summary-icon { font-size: 18px !important; flex-shrink: 0 !important; }
+        #autofill-checklist .afc-summary-text { font-size: 14px !important; margin: 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-summary-text strong { font-weight: 600 !important; }
+        #autofill-checklist .afc-section-label {
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          color: #6b7280 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          margin: 0 0 10px 0 !important;
+          padding: 0 !important;
         }
-        .afc-upload-list {
-          background: #fffbeb;
-          border: 1px solid #fde68a;
-          border-radius: 6px;
-          padding: 12px 14px;
-          margin-bottom: 20px;
+        #autofill-checklist .afc-upload-list {
+          background: #fffbeb !important;
+          border: 1px solid #fde68a !important;
+          border-radius: 6px !important;
+          padding: 12px 14px !important;
+          margin: 0 0 20px 0 !important;
         }
-        .afc-upload-list p { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 8px; }
-        .afc-upload-list ul { padding-left: 18px; font-size: 12px; color: #92400e; line-height: 1.6; }
-        .afc-upload-list li { margin-bottom: 3px; }
-        .afc-check {
-          display: flex;
-          gap: 10px;
-          align-items: flex-start;
-          padding: 10px 0;
-          border-bottom: 1px solid #f3f4f6;
+        #autofill-checklist .afc-upload-list p { font-size: 13px !important; font-weight: 600 !important; color: #92400e !important; margin: 0 0 8px 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-upload-list ul { padding-left: 18px !important; font-size: 12px !important; color: #92400e !important; line-height: 1.6 !important; margin: 0 !important; }
+        #autofill-checklist .afc-upload-list li { margin: 0 0 3px 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-check {
+          display: flex !important;
+          gap: 10px !important;
+          align-items: flex-start !important;
+          padding: 10px 0 !important;
+          border-bottom: 1px solid #f3f4f6 !important;
+          margin: 0 !important;
         }
-        .afc-check:last-child { border-bottom: none; }
-        .afc-check-box {
-          width: 20px;
-          height: 20px;
-          border: 1.5px solid #d1d5db;
-          border-radius: 4px;
-          flex-shrink: 0;
-          margin-top: 1px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 13px;
-          color: transparent;
-          background: #fff;
+        #autofill-checklist .afc-check:last-child { border-bottom: none !important; }
+        #autofill-checklist .afc-check-box {
+          width: 20px !important;
+          height: 20px !important;
+          min-width: 20px !important;
+          min-height: 20px !important;
+          border: 1.5px solid #d1d5db !important;
+          border-radius: 4px !important;
+          flex-shrink: 0 !important;
+          margin: 1px 0 0 0 !important;
+          padding: 0 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 13px !important;
+          color: transparent !important;
+          background: #fff !important;
+          line-height: 1 !important;
         }
-        .afc-check-box.checked {
-          background: #059669;
-          border-color: #059669;
-          color: #fff;
+        #autofill-checklist .afc-check-box.checked {
+          background: #059669 !important;
+          border-color: #059669 !important;
+          color: #fff !important;
         }
-        .afc-check-label { font-size: 13px; line-height: 1.4; }
-        .afc-check-detail { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
-        .afc-warning {
-          display: flex;
-          gap: 10px;
-          align-items: flex-start;
-          padding: 12px 14px;
-          border-radius: 6px;
-          margin-bottom: 8px;
+        #autofill-checklist .afc-check-label { font-size: 13px !important; line-height: 1.4 !important; margin: 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-check-detail { font-size: 12px !important; color: #6b7280 !important; margin: 3px 0 0 0 !important; padding: 0 !important; line-height: 1.4 !important; }
+        #autofill-checklist .afc-warning {
+          display: flex !important;
+          gap: 10px !important;
+          align-items: flex-start !important;
+          padding: 12px 14px !important;
+          border-radius: 6px !important;
+          margin: 0 0 8px 0 !important;
         }
-        .afc-warning:last-child { margin-bottom: 20px; }
-        .afc-warning.info { background: #eff6ff; border: 1px solid #bfdbfe; }
-        .afc-warning.info * { color: #1e40af; }
-        .afc-warning.warning { background: #fffbeb; border: 1px solid #fde68a; }
-        .afc-warning.warning * { color: #92400e; }
-        .afc-warning.danger { background: #fef2f2; border: 1px solid #fecaca; }
-        .afc-warning.danger * { color: #991b1b; }
-        .afc-warning-icon { font-size: 16px; flex-shrink: 0; }
-        .afc-warning-label { font-size: 13px; font-weight: 500; }
-        .afc-warning-detail { font-size: 12px; margin-top: 4px; line-height: 1.5; }
-        .afc-footer {
-          padding: 16px 20px;
-          border-top: 1px solid #e5e7eb;
-          background: #f8fafc;
-          flex-shrink: 0;
+        #autofill-checklist .afc-warning:last-child { margin-bottom: 20px !important; }
+        #autofill-checklist .afc-warning.info { background: #eff6ff !important; border: 1px solid #bfdbfe !important; }
+        #autofill-checklist .afc-warning.info * { color: #1e40af !important; }
+        #autofill-checklist .afc-warning.warning { background: #fffbeb !important; border: 1px solid #fde68a !important; }
+        #autofill-checklist .afc-warning.warning * { color: #92400e !important; }
+        #autofill-checklist .afc-warning.danger { background: #fef2f2 !important; border: 1px solid #fecaca !important; }
+        #autofill-checklist .afc-warning.danger * { color: #991b1b !important; }
+        #autofill-checklist .afc-warning-icon { font-size: 16px !important; flex-shrink: 0 !important; margin: 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-warning-label { font-size: 13px !important; font-weight: 500 !important; margin: 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-warning-detail { font-size: 12px !important; margin: 4px 0 0 0 !important; padding: 0 !important; line-height: 1.5 !important; }
+        #autofill-checklist .afc-footer {
+          padding: 16px 20px !important;
+          border-top: 1px solid #e5e7eb !important;
+          background: #f8fafc !important;
+          flex-shrink: 0 !important;
+          margin: 0 !important;
         }
-        .afc-close-btn {
-          width: 100%;
-          background: #1d4ed8;
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 12px 20px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          letter-spacing: 0.01em;
+        #autofill-checklist .afc-close-btn {
+          width: 100% !important;
+          background: #1d4ed8 !important;
+          color: #fff !important;
+          border: none !important;
+          border-radius: 6px !important;
+          padding: 12px 20px !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          letter-spacing: 0.01em !important;
+          margin: 0 !important;
+          display: block !important;
         }
-        .afc-close-btn:hover { background: #1e40af; }
-        .afc-version { display: block; text-align: center; font-size: 11px; color: #9ca3af; margin-top: 10px; }
+        #autofill-checklist .afc-close-btn:hover { background: #1e40af !important; }
+        #autofill-checklist .afc-version { display: block !important; text-align: center !important; font-size: 11px !important; color: #9ca3af !important; margin: 10px 0 0 0 !important; padding: 0 !important; }
       </style>
 
       <div class="afc-header">
