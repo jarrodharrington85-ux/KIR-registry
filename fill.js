@@ -179,9 +179,9 @@
             el.value = partial.value;
           } else {
             // Try space-collapsed match (PDF line-wrap artifacts)
-            const collapsed = normalised.replace(/\s+/g, '');
+            const collapsed = normalised.replace(/[\s\u00A0\u200B]+/g, '');
             const collapsedMatch = Array.from(el.options).find(
-              o => o.text.trim().toLowerCase().replace(/\s+/g, '') === collapsed
+              o => o.text.trim().toLowerCase().replace(/[\s\u00A0\u200B]+/g, '') === collapsed
             );
             if (collapsedMatch) {
               el.value = collapsedMatch.value;
@@ -414,11 +414,20 @@
     if (partial) return lookup[partial];
 
     // Space-collapsed match (handles PDF line-wrap artifacts like "Kiri bati" → "kiribati")
-    const collapsed = key.replace(/\s+/g, '');
-    const collapsedMatch = Object.keys(lookup).find(k => k.replace(/\s+/g, '') === collapsed);
+    // Also strip non-breaking spaces (char 160) and other Unicode whitespace
+    const collapsed = key.replace(/[\s\u00A0\u200B]+/g, '');
+    const collapsedMatch = Object.keys(lookup).find(k => k.replace(/[\s\u00A0\u200B]+/g, '') === collapsed);
     if (collapsedMatch) return lookup[collapsedMatch];
 
-    log.warn(`Country not resolved: "${name}"`);
+    // Last resort: try matching just the collapsed key against collapsed lookup keys
+    // using normalize to handle any Unicode oddities
+    const normalCollapsed = collapsed.normalize('NFC');
+    const lastResort = Object.keys(lookup).find(k => 
+      k.replace(/[\s\u00A0\u200B]+/g, '').normalize('NFC') === normalCollapsed
+    );
+    if (lastResort) return lookup[lastResort];
+
+    log.warn(`Country not resolved: "${name}" (key="${key}", collapsed="${key.replace(/[\s\u00A0\u200B]+/g, '')}", charCodes=${Array.from(key).map(c => c.charCodeAt(0)).join(',')})`);
     return null;
   }
 
