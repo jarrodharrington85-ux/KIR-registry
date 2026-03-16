@@ -452,10 +452,15 @@
 
     // For BN-0 re-registrations, copy existing name into "New business name"
     // (the business is re-registering under the same name)
-    if (formInfo.formType === 'BN-0' && formInfo.entityName) {
-      const result = fieldSetter.setText('corpname', formInfo.entityName);
-      log.field('New business name', result === 'ok' ? 'ok' : 'fail',
-        result === 'ok' ? `Copied: "${formInfo.entityName}"` : result);
+    if (formInfo.formType === 'BN-0') {
+      const nameToSet = formInfo.entityName || data.businessName;
+      if (nameToSet) {
+        const result = fieldSetter.setText('corpname', nameToSet);
+        log.field('New business name', result === 'ok' ? 'ok' : 'fail',
+          result === 'ok' ? `Copied: "${nameToSet}"` : result);
+        // The entity-name-input component may need extra time
+        await sleep(300);
+      }
     }
 
     // Foreign investment radio: JSON "Yes"→"true", "No"→"false"
@@ -473,16 +478,16 @@
 
     // Set country FIRST — this triggers Vue to show/hide conditional fields
     // (e.g. Kiribati shows "Island" instead of "City/Town")
-    if (addr.country) {
-      const countryVal = resolveCountry(addr.country);
-      if (countryVal) {
-        const result = fieldSetter.setSelect('principalplaceofbusinesscorpaddresscountryid', countryVal);
-        log.field('Country', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? addr.country : result);
-      }
+    // Always set explicitly even if not in JSON — default to Kiribati for BN
+    const addrCountry = addr.country || 'Kiribati';
+    const countryVal = resolveCountry(addrCountry);
+    if (countryVal) {
+      const result = fieldSetter.setSelect('principalplaceofbusinesscorpaddresscountryid', countryVal);
+      log.field('Country', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? addrCountry : result);
     }
 
     // Wait for Vue to re-render conditional fields after country change
-    await sleep(500);
+    await sleep(1000);
 
     // Now set the remaining address fields
     const addrFields = [
@@ -834,7 +839,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(300);
+    await sleep(800);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -890,7 +895,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(300);
+    await sleep(800);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
@@ -931,7 +936,7 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', bo.country, lbl('country'));
-    await sleep(300);
+    await sleep(800);
 
     setRowField(row, 'corpofficercorpaddressstreet1', bo.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
