@@ -543,9 +543,8 @@
 
     // For BN-0 re-registrations, set "New business name"
     // This is an entity-name-input component with debounced input handlers.
-    // Standard value-setting gets overwritten by the debounce. Instead, we:
-    //  1. Find the Vue component and call its debouncedInput directly
-    //  2. Or simulate typing by setting value + dispatching input on each keystroke
+    // The component only accepts values set via real keystroke events.
+    // We simulate typing character by character to match what the user does.
     if (formInfo.formType === 'BN-0') {
       const nameToSet = formInfo.entityName || data.businessName;
       if (nameToSet) {
@@ -554,69 +553,25 @@
           el.focus();
           await sleep(200);
 
-          // Find the Vue component
-          let vm = null;
-          let node = el;
-          for (let i = 0; i < 15; i++) {
-            if (node.__vue__) { vm = node.__vue__; break; }
-            node = node.parentElement;
-            if (!node) break;
+          // Type character by character
+          for (let i = 0; i < nameToSet.length; i++) {
+            el.value = nameToSet.substring(0, i + 1);
+            el.dispatchEvent(new InputEvent('input', {
+              bubbles: true,
+              data: nameToSet[i],
+              inputType: 'insertText'
+            }));
+            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: nameToSet[i] }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: nameToSet[i] }));
+            await sleep(30);
           }
-
-          // Strategy: set the native value then trigger the Vue component's
-          // own input handler via a real InputEvent (not just Event('input')).
-          // InputEvent carries the 'data' property that many Vue input components check.
-          const nativeSetter = Object.getOwnPropertyDescriptor(
-            HTMLInputElement.prototype, 'value'
-          )?.set;
-
-          if (nativeSetter) {
-            nativeSetter.call(el, nameToSet);
-          } else {
-            el.value = nameToSet;
-          }
-
-          // Dispatch InputEvent (not plain Event) — this is what real typing produces
-          el.dispatchEvent(new InputEvent('input', {
-            bubbles: true,
-            cancelable: true,
-            inputType: 'insertText',
-            data: nameToSet
-          }));
-
-          // Also fire change and the debounced handler directly if available
           el.dispatchEvent(new Event('change', { bubbles: true }));
-
-          if (vm && typeof vm.debouncedInput === 'function') {
-            // Call the component's own debounced input handler
-            vm.debouncedInput(nameToSet);
-            log.info('Called vm.debouncedInput directly');
-          }
-
-          if (vm && typeof vm.debouncedValueChange === 'function') {
-            vm.debouncedValueChange(nameToSet);
-            log.info('Called vm.debouncedValueChange directly');
-          }
-
-          // Give debounce time to settle
-          await sleep(800);
-
-          // Also try emitting through Vue
-          if (vm && typeof vm.$emit === 'function') {
-            vm.$emit('input', nameToSet);
-            vm.$emit('change', nameToSet);
-          }
 
           await sleep(300);
 
-          // Verify
           const stuck = el.value && el.value.length > 0;
-          if (stuck) {
-            log.field('New business name', 'ok', `Set: "${el.value}"`);
-          } else {
-            log.field('New business name', 'fail',
-              `Component rejected value — staff must type "${nameToSet}" manually`);
-          }
+          log.field('New business name', stuck ? 'ok' : 'fail',
+            stuck ? `Typed: "${el.value}"` : `Failed — staff must type "${nameToSet}" manually`);
         } else {
           log.field('New business name', 'fail', 'Field not found');
         }
