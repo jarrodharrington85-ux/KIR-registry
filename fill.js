@@ -473,26 +473,18 @@
     // Tab 1: Business Name
     navigateToTab('business-name');
 
-    // For BN-0 re-registrations, copy existing name into "New business name"
-    // (the business is re-registering under the same name)
+    // For BN-0 re-registrations, set "New business name"
+    // This is an entity-name-input search component — it may reject programmatic input.
+    // Try to set it, but report honestly if the component doesn't accept the value.
     if (formInfo.formType === 'BN-0') {
       const nameToSet = formInfo.entityName || data.businessName;
       if (nameToSet) {
         const el = fieldSetter.find('corpname');
         if (el) {
-          // The entity-name-input is a custom Vue component that may not respond
-          // to standard value setting. Use multiple strategies:
-          
-          // 1. Focus the field first
+          // Focus and set value
           el.focus();
           await sleep(100);
-          
-          // 2. Clear existing value
-          el.value = '';
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          await sleep(100);
-          
-          // 3. Set via native setter
+
           const nativeSetter = Object.getOwnPropertyDescriptor(
             HTMLInputElement.prototype, 'value'
           )?.set;
@@ -501,42 +493,48 @@
           } else {
             el.value = nameToSet;
           }
-          
-          // 4. Fire comprehensive events
+
+          // Fire events
           el.dispatchEvent(new Event('input', { bubbles: true }));
           el.dispatchEvent(new Event('change', { bubbles: true }));
           el.dispatchEvent(new Event('blur', { bubbles: true }));
           el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-          
-          // 5. Walk up to find Vue instance and set directly
+
+          // Try Vue localValue
           let node = el;
           for (let i = 0; i < 10; i++) {
             if (node.__vue__) {
               const vm = node.__vue__;
-              // Try various property names the component might use
+              // Log what properties exist for debugging
+              const dataKeys = vm.$data ? Object.keys(vm.$data) : [];
+              log.info(`corpname Vue $data keys: ${dataKeys.join(', ')}`);
+              
               if ('localValue' in vm) vm.localValue = nameToSet;
-              if ('value' in vm.$data) vm.$data.value = nameToSet;
+              if (vm.$data && 'value' in vm.$data) vm.$data.value = nameToSet;
               if ('inputValue' in vm) vm.inputValue = nameToSet;
               if ('query' in vm) vm.query = nameToSet;
-              if ('searchText' in vm) vm.searchText = nameToSet;
+              if ('name' in vm) vm.name = nameToSet;
               if (typeof vm.$emit === 'function') {
                 vm.$emit('input', nameToSet);
                 vm.$emit('change', nameToSet);
               }
-              // Force re-render
               if (typeof vm.$forceUpdate === 'function') vm.$forceUpdate();
               break;
             }
             node = node.parentElement;
             if (!node) break;
           }
-          
-          await sleep(300);
-          
-          // Check if it stuck
-          const currentVal = el.value;
-          log.field('New business name', currentVal ? 'ok' : 'fail',
-            currentVal ? `Set: "${currentVal}"` : `Value didn't persist — component may need manual entry`);
+
+          await sleep(500);
+
+          // Verify
+          const stuck = el.value && el.value.length > 0;
+          if (stuck) {
+            log.field('New business name', 'ok', `Set: "${el.value}"`);
+          } else {
+            log.field('New business name', 'fail',
+              `Search component rejected value — staff must type "${nameToSet}" manually`);
+          }
         } else {
           log.field('New business name', 'fail', 'Field not found');
         }
@@ -1337,25 +1335,50 @@
   }
 
   /**
-   * Poll until a field becomes a <select>, or timeout.
-   * Used after setting country — Vue re-renders the island/state field 
-   * from <input> to <select> but this takes variable time on slow connections.
+   * Wait for a field's options to change after a country selection.
+   * The field may ALREADY be a <select> with old options — we need to wait
+   * for Vue to swap in the new option list (e.g. generic states → Kiribati islands).
+   * 
+   * Strategy: snapshot the current first-option text, then poll until either:
+   *   (a) the first option text changes, or
+   *   (b) the element type changes (input→select or vice versa), or
+   *   (c) timeout
+   * 
    * @param {string} fieldName - field ID prefix
    * @param {Element} [container] - optional container to search within
    * @param {number} [timeout=5000] - max wait in ms
    * @param {number} [interval=200] - poll interval in ms
-   * @returns {Promise<Element|null>} the select element, or null if timeout
+   * @returns {Promise<Element|null>} the field element after change, or null
    */
   async function waitForSelect(fieldName, container, timeout = 5000, interval = 200) {
+    // Snapshot current state
+    const initialEl = fieldSetter.find(fieldName, container);
+    const initialTag = initialEl ? initialEl.tagName : null;
+    const initialOptionCount = (initialEl && initialEl.tagName === 'SELECT') ? initialEl.options.length : 0;
+    const initialFirstOption = (initialEl && initialEl.tagName === 'SELECT' && initialEl.options.length > 1)
+      ? initialEl.options[1].text : null; // [1] to skip the "CLICK TO SELECT" placeholder
+
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
-      const el = fieldSetter.find(fieldName, container);
-      if (el && el.tagName === 'SELECT' && el.options.length > 1) {
-        return el;
-      }
       await sleep(interval);
+      const el = fieldSetter.find(fieldName, container);
+      if (!el) continue;
+
+      // Check if element type changed (input→select or new element entirely)
+      if (el.tagName !== initialTag) return el;
+
+      // If it's a select, check if options changed
+      if (el.tagName === 'SELECT') {
+        const currentCount = el.options.length;
+        const currentFirst = (currentCount > 1) ? el.options[1].text : null;
+
+        // Options have changed — new country options loaded
+        if (currentCount !== initialOptionCount) return el;
+        if (currentFirst !== initialFirstOption) return el;
+      }
     }
-    // Return whatever we have even if not a select
+
+    log.warn(`waitForSelect timeout for ${fieldName} — proceeding with current state`);
     return fieldSetter.find(fieldName, container);
   }
 
