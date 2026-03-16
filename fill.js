@@ -1804,7 +1804,45 @@
         }
         #autofill-checklist .afc-close-btn:hover { background: #1e40af !important; }
         #autofill-checklist .afc-version { display: block !important; text-align: center !important; font-size: 11px !important; color: #9ca3af !important; margin: 10px 0 0 0 !important; padding: 0 !important; }
+        #autofill-checklist .afc-minimize {
+          position: absolute !important;
+          top: 12px !important;
+          left: -36px !important;
+          width: 36px !important;
+          height: 36px !important;
+          background: #1d4ed8 !important;
+          color: #fff !important;
+          border: none !important;
+          border-radius: 6px 0 0 6px !important;
+          cursor: pointer !important;
+          font-size: 16px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          box-shadow: -2px 0 6px rgba(0,0,0,0.1) !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          z-index: 100000 !important;
+        }
+        #autofill-checklist .afc-minimize:hover { background: #1e40af !important; }
+        #autofill-checklist.afc-collapsed {
+          width: 0px !important;
+          border-left: none !important;
+          box-shadow: none !important;
+          overflow: hidden !important;
+        }
+        #autofill-checklist.afc-collapsed .afc-header,
+        #autofill-checklist.afc-collapsed .afc-body,
+        #autofill-checklist.afc-collapsed .afc-footer {
+          display: none !important;
+        }
+        #autofill-checklist.afc-collapsed .afc-minimize {
+          left: -36px !important;
+          border-radius: 6px 0 0 6px !important;
+        }
       </style>
+
+      <button class="afc-minimize" onclick="var p=document.getElementById('autofill-checklist'); p.classList.toggle('afc-collapsed'); this.textContent = p.classList.contains('afc-collapsed') ? '☰' : '→';" title="Minimize/expand checklist">→</button>
 
       <div class="afc-header">
         <h2>Auto-fill complete</h2>
