@@ -541,42 +541,10 @@
     // Tab 1: Business Name
     navigateToTab('business-name');
 
-    // For BN-0 re-registrations, set "New business name"
-    // This is an entity-name-input component with debounced input handlers.
-    // The component only accepts values set via real keystroke events.
-    // We simulate typing character by character to match what the user does.
-    if (formInfo.formType === 'BN-0') {
-      const nameToSet = formInfo.entityName || data.businessName;
-      if (nameToSet) {
-        const el = fieldSetter.find('corpname');
-        if (el) {
-          el.focus();
-          await sleep(200);
-
-          // Type character by character
-          for (let i = 0; i < nameToSet.length; i++) {
-            el.value = nameToSet.substring(0, i + 1);
-            el.dispatchEvent(new InputEvent('input', {
-              bubbles: true,
-              data: nameToSet[i],
-              inputType: 'insertText'
-            }));
-            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: nameToSet[i] }));
-            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: nameToSet[i] }));
-            await sleep(30);
-          }
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-
-          await sleep(300);
-
-          const stuck = el.value && el.value.length > 0;
-          log.field('New business name', stuck ? 'ok' : 'fail',
-            stuck ? `Typed: "${el.value}"` : `Failed — staff must type "${nameToSet}" manually`);
-        } else {
-          log.field('New business name', 'fail', 'Field not found');
-        }
-      }
-    }
+    // For BN-0 re-registrations, "New business name" is filled at the END
+    // of the script (after all tabs are done) because the entity-name-input
+    // component clears its value when navigating away from this tab.
+    // See the end of run() for the actual typing.
 
     // Foreign investment radio: JSON "Yes"→"true", "No"→"false"
     if (data.foreignInvestment) {
@@ -587,8 +555,6 @@
     }
 
     // Tab 4: Addresses
-    // Wait extra time for business name debounce to settle before navigating away
-    await sleep(1500);
     navigateToTab('addresses');
 
     const addr = data.businessAddress || {};
@@ -1472,11 +1438,46 @@
     await fillOwners(data.owners);
     await fillBeneficialOwners(data.beneficialOwners);
 
-    // 10. Summary
-    const counts = log.summary();
-
-    // Navigate back to first tab for review
+    // 10. Fill business name LAST — the entity-name-input component clears
+    // its value when navigating away from the tab. By typing it last,
+    // we stay on the business-name tab and nothing else triggers a tab change.
     navigateToTab('business-name');
+    await sleep(300);
+
+    if (formInfo.formType === 'BN-0') {
+      const nameToSet = formInfo.entityName || data.businessName;
+      if (nameToSet) {
+        const el = fieldSetter.find('corpname');
+        if (el) {
+          el.focus();
+          await sleep(200);
+
+          // Type character by character — the component only accepts real keystroke events
+          for (let i = 0; i < nameToSet.length; i++) {
+            el.value = nameToSet.substring(0, i + 1);
+            el.dispatchEvent(new InputEvent('input', {
+              bubbles: true,
+              data: nameToSet[i],
+              inputType: 'insertText'
+            }));
+            el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: nameToSet[i] }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: nameToSet[i] }));
+            await sleep(30);
+          }
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          await sleep(300);
+
+          const stuck = el.value && el.value.length > 0;
+          log.field('New business name', stuck ? 'ok' : 'fail',
+            stuck ? `Typed: "${el.value}"` : `Failed — staff must type "${nameToSet}" manually`);
+        } else {
+          log.field('New business name', 'fail', 'Field not found');
+        }
+      }
+    }
+
+    // 11. Summary
+    const counts = log.summary();
 
     alert(
       `${TOOL_NAME} complete!\n\n` +
