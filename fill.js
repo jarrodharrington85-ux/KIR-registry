@@ -948,7 +948,7 @@
    * Fill a single Registered Company owner row (2 real fields).
    * Grid B: corpofficercorpofficertypeid = 1026
    */
-  function fillKiCompanyRow(row, owner, index) {
+  async function fillKiCompanyRow(row, owner, index) {
     const lbl = (f) => `Owner ${index} (ki_company): ${f}`;
 
     // Change type → "1" (Added)
@@ -959,9 +959,48 @@
       setRowField(row, 'corpofficerdateofappointment', owner.date, lbl('appointment date'));
     }
 
-    // Registration number + entity name
-    setRowField(row, 'corpofficerregistrationnumber', owner.entityRegNo, lbl('reg number'));
-    setRowField(row, 'corpofficerfullname', owner.entityName, lbl('entity name'));
+    // Registration number — this is a validated input that auto-populates
+    // the entity name. Must type character by character like the business name.
+    if (owner.entityRegNo) {
+      const el = fieldSetter.find('corpofficerregistrationnumber', row);
+      if (el) {
+        el.focus();
+        await sleep(200);
+
+        const regNo = owner.entityRegNo;
+        for (let i = 0; i < regNo.length; i++) {
+          el.value = regNo.substring(0, i + 1);
+          el.dispatchEvent(new InputEvent('input', {
+            bubbles: true,
+            data: regNo[i],
+            inputType: 'insertText'
+          }));
+          el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: regNo[i] }));
+          el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: regNo[i] }));
+          await sleep(30);
+        }
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        // Wait for the auto-validation to look up the company and populate the name
+        await sleep(2000);
+
+        const stuck = el.value && el.value.length > 0;
+        log.field(lbl('reg number'), stuck ? 'ok' : 'fail',
+          stuck ? `Typed: "${el.value}"` : `Failed — staff must type "${regNo}" manually`);
+
+        // Check if entity name was auto-populated
+        const nameEl = fieldSetter.find('corpofficerfullname', row);
+        if (nameEl && nameEl.value) {
+          log.field(lbl('entity name'), 'ok', `Auto-populated: "${nameEl.value}"`);
+        } else {
+          log.field(lbl('entity name'), 'fail',
+            `Name not auto-populated — registration number "${regNo}" may not exist in registry`);
+        }
+      } else {
+        log.field(lbl('reg number'), 'fail', 'Field not found');
+      }
+    }
   }
 
   /**
@@ -1167,7 +1206,7 @@
           try {
             log.info(`Adding Ki company owners ${i + 1}/${kiCo.length}`);
             const row = await addGridRow(grid1.addBtn, grid1.tbody);
-            fillKiCompanyRow(row, kiCo[i], i + 1);
+            await fillKiCompanyRow(row, kiCo[i], i + 1);
             confirmGridRow(row);
             await sleep(500);
           } catch (e) {
