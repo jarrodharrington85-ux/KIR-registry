@@ -1479,14 +1479,325 @@
     // 11. Summary
     const counts = log.summary();
 
-    alert(
-      `${TOOL_NAME} complete!\n\n` +
-      `✓ ${counts.ok} fields filled\n` +
-      `– ${counts.skip} skipped (empty)\n` +
-      `✗ ${counts.fail} failed\n\n` +
-      `Check the console (F12) for details.\n` +
-      `Review all tabs before submitting!`
-    );
+    // 12. Show post-fill checklist panel
+    showChecklist(data, formInfo, counts);
+  }
+
+  // ============================================================
+  // POST-FILL CHECKLIST — Docked side panel
+  // ============================================================
+
+  function showChecklist(data, formInfo, counts) {
+    // Remove any existing panel
+    const existing = document.getElementById('autofill-checklist');
+    if (existing) existing.remove();
+
+    // Build upload requirements
+    const uploads = [];
+    if (data.owners) {
+      data.owners.forEach(o => {
+        if (o.type === 'person') {
+          const name = [o.first, o.middle, o.last].filter(Boolean).join(' ');
+          uploads.push(`Government-issued photo ID for <strong>${name}</strong>`);
+        }
+      });
+    }
+    if (data.beneficialOwners) {
+      data.beneficialOwners.forEach(bo => {
+        const name = [bo.first, bo.middle, bo.last].filter(Boolean).join(' ');
+        uploads.push(`Government-issued photo ID for <strong>${name}</strong> (beneficial owner)`);
+      });
+    }
+    if (data.foreignInvestment === 'Yes') {
+      uploads.push('Kiribati Foreign Investment Registration Certificate');
+    }
+
+    // Build checklist items
+    const checks = [];
+
+    // Tab reviews
+    if (formInfo.formType === 'BN-0') {
+      checks.push({
+        label: 'Review the <strong>Business Name</strong> tab',
+        detail: 'Confirm the name matches the existing registered business name exactly. For re-registration, the name must be identical.'
+      });
+    } else {
+      checks.push({
+        label: 'Review the <strong>Business Name</strong> tab',
+        detail: 'Confirm the business name is correct. For new registrations, the name must be unique — use the search button to verify availability.'
+      });
+    }
+
+    if (data.owners && data.owners.length > 0) {
+      const ownerNames = data.owners
+        .filter(o => o.type === 'person')
+        .map(o => [o.first, o.last].filter(Boolean).join(' '));
+      checks.push({
+        label: 'Review the <strong>Owners</strong> tab',
+        detail: `${data.owners.length} owner(s) added — check nationality and address${ownerNames.length ? ' for ' + ownerNames.join(', ') : ''}`
+      });
+    }
+
+    if (data.beneficialOwners && data.beneficialOwners.length > 0) {
+      const boNames = data.beneficialOwners.map(bo => [bo.first, bo.last].filter(Boolean).join(' '));
+      checks.push({
+        label: 'Review the <strong>Beneficial Owners</strong> tab',
+        detail: `Check ${boNames.join(', ')} — nationality, address, relationship`
+      });
+    }
+
+    checks.push({
+      label: 'Review the <strong>Addresses</strong> tab',
+      detail: 'Check street address and island are correct'
+    });
+
+    if (data.activities && data.activities.length > 0) {
+      checks.push({
+        label: 'Review the <strong>Business Activities</strong> tab',
+        detail: `${data.activities.length} activit${data.activities.length === 1 ? 'y' : 'ies'} added — check selections are correct`
+      });
+    }
+
+    // Build warnings
+    const warnings = [];
+
+    if (data.foreignInvestment === 'Yes') {
+      warnings.push({
+        icon: 'ℹ',
+        label: 'Foreign investment is <strong>Yes</strong>',
+        detail: 'Confirm certificate is uploaded before submitting',
+        type: 'info'
+      });
+    }
+
+    // Check for pre-formation appointment dates
+    const formationEl = fieldSetter.find('corporiginalformationdate');
+    const formationDate = formationEl ? formationEl.value : null;
+    if (formationDate && data.owners) {
+      const hasEarlyDate = data.owners.some(o => {
+        if (!o.date) return false;
+        // Compare DD/MM/YYYY dates
+        const [dd, mm, yyyy] = o.date.split('/');
+        const [fdd, fmm, fyyyy] = formationDate.split('/');
+        const ownerDate = new Date(yyyy, mm - 1, dd);
+        const formDate = new Date(fyyyy, fmm - 1, fdd);
+        return ownerDate < formDate;
+      });
+      if (hasEarlyDate) {
+        warnings.push({
+          icon: '⚠',
+          label: 'Appointment date validation warning',
+          detail: 'Some owner dates are before the formation date. This is expected for re-registrations — the registry may show a "dateLessThanMinDate" warning. This can be ignored.',
+          type: 'warning'
+        });
+      }
+    }
+
+    // Failed fields warning
+    if (counts.fail > 0) {
+      const failedList = log._entries
+        .filter(e => e.status === 'fail')
+        .map(e => `${e.name}: ${e.detail}`)
+        .join('<br>');
+      warnings.push({
+        icon: '✗',
+        label: `<strong>${counts.fail} field(s) failed</strong>`,
+        detail: `These must be entered manually:<br>${failedList}`,
+        type: 'danger'
+      });
+    }
+
+    // Render panel
+    const panel = document.createElement('div');
+    panel.id = 'autofill-checklist';
+    panel.innerHTML = `
+      <style>
+        #autofill-checklist {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 340px;
+          height: 100vh;
+          background: #fff;
+          border-left: 2px solid #d1d5db;
+          box-shadow: -4px 0 12px rgba(0,0,0,0.08);
+          z-index: 99999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-size: 13px;
+          color: #1f2937;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        #autofill-checklist * { box-sizing: border-box; margin: 0; padding: 0; }
+        .afc-header {
+          padding: 14px 16px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e5e7eb;
+          flex-shrink: 0;
+        }
+        .afc-header h2 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+        .afc-header p { font-size: 12px; color: #6b7280; }
+        .afc-body {
+          flex: 1;
+          overflow-y: auto;
+          padding: 14px 16px;
+        }
+        .afc-summary {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          background: ${counts.fail > 0 ? '#fef2f2' : '#f0fdf4'};
+          border-radius: 6px;
+          margin-bottom: 14px;
+          border: 1px solid ${counts.fail > 0 ? '#fecaca' : '#bbf7d0'};
+        }
+        .afc-summary-icon { font-size: 18px; flex-shrink: 0; }
+        .afc-summary-text { font-size: 13px; }
+        .afc-summary-text strong { font-weight: 600; }
+        .afc-section-label {
+          font-size: 11px;
+          font-weight: 700;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin: 16px 0 8px;
+        }
+        .afc-upload-list {
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: 6px;
+          padding: 10px 12px;
+          margin-bottom: 6px;
+        }
+        .afc-upload-list p { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 6px; }
+        .afc-upload-list ul { padding-left: 18px; font-size: 12px; color: #92400e; }
+        .afc-upload-list li { margin-bottom: 3px; }
+        .afc-check {
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
+          padding: 8px 0;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .afc-check:last-child { border-bottom: none; }
+        .afc-check-box {
+          width: 18px;
+          height: 18px;
+          border: 1.5px solid #d1d5db;
+          border-radius: 3px;
+          flex-shrink: 0;
+          margin-top: 1px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          color: transparent;
+          background: #fff;
+        }
+        .afc-check-box.checked {
+          background: #059669;
+          border-color: #059669;
+          color: #fff;
+        }
+        .afc-check-label { font-size: 13px; }
+        .afc-check-detail { font-size: 12px; color: #6b7280; margin-top: 1px; }
+        .afc-warning {
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
+          padding: 10px 12px;
+          border-radius: 6px;
+          margin-bottom: 6px;
+        }
+        .afc-warning.info { background: #eff6ff; border: 1px solid #bfdbfe; }
+        .afc-warning.info * { color: #1e40af; }
+        .afc-warning.warning { background: #fffbeb; border: 1px solid #fde68a; }
+        .afc-warning.warning * { color: #92400e; }
+        .afc-warning.danger { background: #fef2f2; border: 1px solid #fecaca; }
+        .afc-warning.danger * { color: #991b1b; }
+        .afc-warning-icon { font-size: 16px; flex-shrink: 0; }
+        .afc-warning-label { font-size: 13px; font-weight: 500; }
+        .afc-warning-detail { font-size: 12px; margin-top: 2px; }
+        .afc-footer {
+          padding: 10px 16px;
+          border-top: 1px solid #e5e7eb;
+          background: #f8fafc;
+          flex-shrink: 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .afc-close-btn {
+          background: #1d4ed8;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
+          padding: 7px 20px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .afc-close-btn:hover { background: #1e40af; }
+        .afc-version { font-size: 11px; color: #9ca3af; }
+      </style>
+
+      <div class="afc-header">
+        <h2>Auto-fill complete</h2>
+        <p>${data.businessName || formInfo.entityName || 'Business name'} — ${formInfo.formType} ${formInfo.formType === 'BN-0' ? 're-registration' : 'registration'}</p>
+      </div>
+
+      <div class="afc-body">
+        <div class="afc-summary">
+          <span class="afc-summary-icon">${counts.fail > 0 ? '⚠' : '✓'}</span>
+          <div class="afc-summary-text">
+            <strong>${counts.ok} fields filled</strong>, ${counts.skip} skipped${counts.fail > 0 ? `, <strong>${counts.fail} failed</strong>` : ''}
+          </div>
+        </div>
+
+        ${uploads.length > 0 ? `
+          <div class="afc-section-label">Upload required</div>
+          <div class="afc-upload-list">
+            <p>⚠ Upload with this filing:</p>
+            <ul>${uploads.map(u => `<li>${u}</li>`).join('')}</ul>
+          </div>
+        ` : ''}
+
+        ${warnings.length > 0 ? `
+          <div class="afc-section-label">Notices</div>
+          ${warnings.map(w => `
+            <div class="afc-warning ${w.type}">
+              <span class="afc-warning-icon">${w.icon}</span>
+              <div>
+                <div class="afc-warning-label">${w.label}</div>
+                <div class="afc-warning-detail">${w.detail}</div>
+              </div>
+            </div>
+          `).join('')}
+        ` : ''}
+
+        <div class="afc-section-label">Review before submitting</div>
+        ${checks.map((c, i) => `
+          <div class="afc-check">
+            <div class="afc-check-box" data-idx="${i}" onclick="this.classList.toggle('checked'); this.textContent = this.classList.contains('checked') ? '✓' : '';">
+            </div>
+            <div>
+              <div class="afc-check-label">${c.label}</div>
+              <div class="afc-check-detail">${c.detail}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="afc-footer">
+        <span class="afc-version">Auto-Fill v${VERSION}</span>
+        <button class="afc-close-btn" onclick="document.getElementById('autofill-checklist').remove();">Close</button>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
   }
 
   // ============================================================
