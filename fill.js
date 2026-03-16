@@ -510,13 +510,13 @@
     }
 
     // Wait for Vue to re-render conditional fields after country change
-    await sleep(1000);
+    await sleep(1500);
 
     // Now set the remaining address fields
+    // Island/State may be a <select> after country change (e.g. Kiribati)
     const addrFields = [
       ['principalplaceofbusinesscorpaddressstreet1', addr.addr1, 'Address line 1'],
       ['principalplaceofbusinesscorpaddressstreet2', addr.addr2, 'Address line 2'],
-      ['principalplaceofbusinesscorpaddressstate',   addr.island, 'Island'],
       ['principalplaceofbusinesscorpaddresscity',    addr.city, 'City/Town'],
       ['principalplaceofbusinesscorpaddresszip',     addr.postcode, 'Postal code'],
     ];
@@ -531,6 +531,21 @@
         log.field(label, 'fail', result);
       }
     });
+
+    // Handle island separately — may be a select
+    if (addr.island) {
+      const islandEl = fieldSetter.find('principalplaceofbusinesscorpaddressstate');
+      if (islandEl && islandEl.tagName === 'SELECT') {
+        const result = fieldSetter.setSelectByText('principalplaceofbusinesscorpaddressstate', addr.island);
+        log.field('Island', result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
+          result === 'ok' ? `"${addr.island}"` : result);
+      } else {
+        const result = fieldSetter.setText('principalplaceofbusinesscorpaddressstate', addr.island);
+        log.field('Island', result === 'ok' ? 'ok' : 'fail', result === 'ok' ? `"${addr.island}"` : result);
+      }
+    } else {
+      log.field('Island', 'skip', 'No value in JSON');
+    }
 
     // Address change type radio — set to "1" (Yes/Added) for re-registrations
     {
@@ -862,11 +877,23 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(800);
+    await sleep(1500);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
-    setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
+
+    // Island/State — after country change, this may be a <select> (e.g. for Kiribati)
+    if (owner.island) {
+      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
+      if (islandEl && islandEl.tagName === 'SELECT') {
+        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', owner.island, row);
+        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
+          result === 'ok' ? `"${owner.island}"` : result);
+      } else {
+        setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
+      }
+    }
+
     setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', owner.postcode, lbl('postal code'));
   }
@@ -918,11 +945,22 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', owner.country, lbl('country'));
-    await sleep(800);
+    await sleep(1500);
 
     setRowField(row, 'corpofficercorpaddressstreet1', owner.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', owner.addr2, lbl('address line 2'));
-    setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
+
+    if (owner.island) {
+      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
+      if (islandEl && islandEl.tagName === 'SELECT') {
+        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', owner.island, row);
+        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
+          result === 'ok' ? `"${owner.island}"` : result);
+      } else {
+        setRowField(row, 'corpofficercorpaddressstate', owner.island, lbl('island'));
+      }
+    }
+
     setRowField(row, 'corpofficercorpaddresscity', owner.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', owner.postcode, lbl('postal code'));
   }
@@ -959,11 +997,22 @@
 
     // Address — set country FIRST, wait for Vue conditional re-render
     setCountryOrNationality(row, 'corpofficercorpaddresscountryid', bo.country, lbl('country'));
-    await sleep(800);
+    await sleep(1500);
 
     setRowField(row, 'corpofficercorpaddressstreet1', bo.addr1, lbl('address line 1'));
     setRowField(row, 'corpofficercorpaddressstreet2', bo.addr2, lbl('address line 2'));
-    setRowField(row, 'corpofficercorpaddressstate', bo.island, lbl('island'));
+
+    if (bo.island) {
+      const islandEl = fieldSetter.find('corpofficercorpaddressstate', row);
+      if (islandEl && islandEl.tagName === 'SELECT') {
+        const result = fieldSetter.setSelectByText('corpofficercorpaddressstate', bo.island, row);
+        log.field(lbl('island'), result === 'ok' || !result.startsWith('text_not') ? 'ok' : 'fail',
+          result === 'ok' ? `"${bo.island}"` : result);
+      } else {
+        setRowField(row, 'corpofficercorpaddressstate', bo.island, lbl('island'));
+      }
+    }
+
     setRowField(row, 'corpofficercorpaddresscity', bo.city, lbl('city'));
     setRowField(row, 'corpofficercorpaddresszip', bo.postcode, lbl('postal code'));
 
