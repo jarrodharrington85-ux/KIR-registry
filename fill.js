@@ -1118,10 +1118,36 @@
     }
     json = json.trim();
 
+    // Clean PDF copy-paste artifacts:
+    // 1. Strip page headers/footers (ministry header, page numbers, form title)
+    const pdfJunkPatterns = [
+      /MINISTRY OF TOURISM,?\s*COMMERCE,?\s*INDUSTRY AND COOPERATIVES/gi,
+      /business\.gov\.ki/gi,
+      /BN-\d+\s*\|\s*[^\n]*/gi,        // Form title lines like "BN-0 | Application for..."
+      /Page\s+\d+\s+of\s+\d+/gi,       // Page numbers
+      /Structured data[^\n]*/gi,        // Data page heading
+      /This page contains[^\n]*/gi,     // Data page instruction
+      /To import[^\n]*/gi,              // Data page instruction
+    ];
+    pdfJunkPatterns.forEach(p => { json = json.replace(p, ''); });
+
+    // 2. Fix newlines injected by PDF text wrapping inside JSON strings.
+    //    JSON strings cannot contain literal newlines. Replace any newline
+    //    that appears between a non-structural character and a non-structural
+    //    character with a space (i.e. within a string value).
+    //    Strategy: remove all newlines then re-parse. Since the JSON is
+    //    minified (single line), any newline is an artifact.
+    json = json.replace(/\r?\n/g, ' ');
+
+    // 3. Collapse multiple spaces (from stripped junk + newlines)
+    json = json.replace(/\s{2,}/g, ' ');
+
+    json = json.trim();
+
     try {
       return JSON.parse(json);
     } catch (e) {
-      throw new Error(`Invalid JSON: ${e.message}\nFirst 200 chars: ${json.substring(0, 200)}`);
+      throw new Error(`Invalid JSON: ${e.message}\nFirst 300 chars: ${json.substring(0, 300)}`);
     }
   }
 
