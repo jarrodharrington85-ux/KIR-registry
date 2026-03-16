@@ -1701,7 +1701,7 @@
           color: #1f2937 !important;
           display: flex !important;
           flex-direction: column !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
         #autofill-checklist * { box-sizing: border-box !important; }
         #autofill-checklist .afc-header {
@@ -1833,12 +1833,17 @@
           left: -36px !important;
           width: 36px !important;
           height: 36px !important;
+          min-width: 36px !important;
+          min-height: 36px !important;
+          max-width: 36px !important;
+          max-height: 36px !important;
           background: #1d4ed8 !important;
           color: #fff !important;
           border: none !important;
           border-radius: 6px 0 0 6px !important;
           cursor: pointer !important;
           font-size: 16px !important;
+          line-height: 1 !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
@@ -1846,6 +1851,21 @@
           padding: 0 !important;
           margin: 0 !important;
           z-index: 100000 !important;
+          float: none !important;
+          text-transform: none !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          vertical-align: middle !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
+          outline: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          overflow: visible !important;
+          text-shadow: none !important;
+          font-weight: 400 !important;
+          letter-spacing: normal !important;
+          text-indent: 0 !important;
         }
         #autofill-checklist .afc-minimize:hover { background: #1e40af !important; }
         #autofill-checklist.afc-collapsed {
