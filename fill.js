@@ -1667,7 +1667,7 @@
           position: fixed;
           top: 0;
           right: 0;
-          width: 340px;
+          width: 360px;
           height: 100vh;
           background: #fff;
           border-left: 2px solid #d1d5db;
@@ -1682,30 +1682,30 @@
         }
         #autofill-checklist * { box-sizing: border-box; margin: 0; padding: 0; }
         .afc-header {
-          padding: 14px 16px;
+          padding: 16px 20px;
           background: #f8fafc;
           border-bottom: 1px solid #e5e7eb;
           flex-shrink: 0;
         }
-        .afc-header h2 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+        .afc-header h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
         .afc-header p { font-size: 12px; color: #6b7280; }
         .afc-body {
           flex: 1;
           overflow-y: auto;
-          padding: 14px 16px;
+          padding: 20px;
         }
         .afc-summary {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
+          gap: 10px;
+          padding: 12px 14px;
           background: ${counts.fail > 0 ? '#fef2f2' : '#f0fdf4'};
           border-radius: 6px;
-          margin-bottom: 14px;
+          margin-bottom: 20px;
           border: 1px solid ${counts.fail > 0 ? '#fecaca' : '#bbf7d0'};
         }
         .afc-summary-icon { font-size: 18px; flex-shrink: 0; }
-        .afc-summary-text { font-size: 13px; }
+        .afc-summary-text { font-size: 14px; }
         .afc-summary-text strong { font-weight: 600; }
         .afc-section-label {
           font-size: 11px;
@@ -1713,38 +1713,38 @@
           color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          margin: 16px 0 8px;
+          margin: 0 0 10px;
         }
         .afc-upload-list {
           background: #fffbeb;
           border: 1px solid #fde68a;
           border-radius: 6px;
-          padding: 10px 12px;
-          margin-bottom: 6px;
+          padding: 12px 14px;
+          margin-bottom: 20px;
         }
-        .afc-upload-list p { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 6px; }
-        .afc-upload-list ul { padding-left: 18px; font-size: 12px; color: #92400e; }
+        .afc-upload-list p { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 8px; }
+        .afc-upload-list ul { padding-left: 18px; font-size: 12px; color: #92400e; line-height: 1.6; }
         .afc-upload-list li { margin-bottom: 3px; }
         .afc-check {
           display: flex;
-          gap: 8px;
+          gap: 10px;
           align-items: flex-start;
-          padding: 8px 0;
+          padding: 10px 0;
           border-bottom: 1px solid #f3f4f6;
         }
         .afc-check:last-child { border-bottom: none; }
         .afc-check-box {
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
           border: 1.5px solid #d1d5db;
-          border-radius: 3px;
+          border-radius: 4px;
           flex-shrink: 0;
           margin-top: 1px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 13px;
           color: transparent;
           background: #fff;
         }
@@ -1753,16 +1753,17 @@
           border-color: #059669;
           color: #fff;
         }
-        .afc-check-label { font-size: 13px; }
-        .afc-check-detail { font-size: 12px; color: #6b7280; margin-top: 1px; }
+        .afc-check-label { font-size: 13px; line-height: 1.4; }
+        .afc-check-detail { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
         .afc-warning {
           display: flex;
-          gap: 8px;
+          gap: 10px;
           align-items: flex-start;
-          padding: 10px 12px;
+          padding: 12px 14px;
           border-radius: 6px;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
         }
+        .afc-warning:last-child { margin-bottom: 20px; }
         .afc-warning.info { background: #eff6ff; border: 1px solid #bfdbfe; }
         .afc-warning.info * { color: #1e40af; }
         .afc-warning.warning { background: #fffbeb; border: 1px solid #fde68a; }
@@ -1771,28 +1772,27 @@
         .afc-warning.danger * { color: #991b1b; }
         .afc-warning-icon { font-size: 16px; flex-shrink: 0; }
         .afc-warning-label { font-size: 13px; font-weight: 500; }
-        .afc-warning-detail { font-size: 12px; margin-top: 2px; }
+        .afc-warning-detail { font-size: 12px; margin-top: 4px; line-height: 1.5; }
         .afc-footer {
-          padding: 10px 16px;
+          padding: 16px 20px;
           border-top: 1px solid #e5e7eb;
           background: #f8fafc;
           flex-shrink: 0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
         }
         .afc-close-btn {
+          width: 100%;
           background: #1d4ed8;
           color: #fff;
           border: none;
-          border-radius: 5px;
-          padding: 7px 20px;
-          font-size: 13px;
+          border-radius: 6px;
+          padding: 12px 20px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
+          letter-spacing: 0.01em;
         }
         .afc-close-btn:hover { background: #1e40af; }
-        .afc-version { font-size: 11px; color: #9ca3af; }
+        .afc-version { display: block; text-align: center; font-size: 11px; color: #9ca3af; margin-top: 10px; }
       </style>
 
       <div class="afc-header">
@@ -1843,8 +1843,8 @@
       </div>
 
       <div class="afc-footer">
-        <span class="afc-version">Auto-Fill v${VERSION}</span>
-        <button class="afc-close-btn" onclick="document.getElementById('autofill-checklist').remove();">Close</button>
+        <button class="afc-close-btn" onclick="document.getElementById('autofill-checklist').remove();">Close checklist</button>
+        <span class="afc-version">Auto-Fill v${VERSION} — review all tabs before clicking Submit</span>
       </div>
     `;
 
