@@ -178,7 +178,16 @@
           if (partial) {
             el.value = partial.value;
           } else {
-            return `text_not_found: "${text}"`;
+            // Try space-collapsed match (PDF line-wrap artifacts)
+            const collapsed = normalised.replace(/\s+/g, '');
+            const collapsedMatch = Array.from(el.options).find(
+              o => o.text.trim().toLowerCase().replace(/\s+/g, '') === collapsed
+            );
+            if (collapsedMatch) {
+              el.value = collapsedMatch.value;
+            } else {
+              return `text_not_found: "${text}"`;
+            }
           }
         } else {
           el.value = match.value;
@@ -403,6 +412,11 @@
     // Partial match
     const partial = Object.keys(lookup).find(k => k.includes(key) || key.includes(k));
     if (partial) return lookup[partial];
+
+    // Space-collapsed match (handles PDF line-wrap artifacts like "Kiri bati" → "kiribati")
+    const collapsed = key.replace(/\s+/g, '');
+    const collapsedMatch = Object.keys(lookup).find(k => k.replace(/\s+/g, '') === collapsed);
+    if (collapsedMatch) return lookup[collapsedMatch];
 
     log.warn(`Country not resolved: "${name}"`);
     return null;
